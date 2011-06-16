@@ -7,6 +7,8 @@
 #ifndef __INCLUDE_GHETTO_H__
 #define __INCLUDE_GHETTO_H__
 
+#include <stdlib.h>
+
 /* TODO: wrap these in some testing macros */
 typedef unsigned long long  UINT64;
 typedef long long           INT64;
@@ -17,6 +19,11 @@ typedef short               INT16;
 typedef struct tiff     tiff_t;
 typedef int             TIFF_STATUS;
 
+/* forward declare a few useful structs */
+struct tiff_ifd;
+struct tiff_tag;
+
+typedef struct tiff_ifd tiff_ifd_t;
 typedef struct tiff_tag tiff_tag_t;
 typedef UINT64          tiff_off_t;
 typedef UINT16          tiff_tag_id_t;
@@ -31,6 +38,7 @@ typedef UINT16          tiff_tag_id_t;
 #define TIFF_FILE_NOT_FOUND 0x6     /* File cannot be found */
 #define TIFF_END_OF_FILE    0x7     /* End of file was unexpectedly hit */
 #define TIFF_NO_MEMORY      0x8     /* A memory allocation failed */
+#define TIFF_UNKNOWN_TYPE   0x9     /* The type of data represented is unknown */
 
 /* TIFF datatypes */
 #define TIFF_TYPE_BYTE       1
@@ -60,22 +68,30 @@ TIFF_STATUS tiff_close(tiff_t *fp);
 TIFF_STATUS tiff_get_base_ifd_offset(tiff_t *fp, tiff_off_t *off);
 
 /* Read a TIFF IFD at offset */
-TIFF_STATUS tiff_read(tiff_t *fp, tiff_off_t off);
+TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd);
 
-/* Get the count of tags in the active IFD */
-TIFF_STATUS tiff_get_ifd_tag_count(tiff_t *fp);
+/* Get the offset of the next IFD */
+TIFF_STATUS tiff_get_next_ifd_offset(tiff_t *fp, tiff_ifd_t *ifd, tiff_off_t *off);
 
-/* Get information about a given tag */
-TIFF_STATUS tiff_get_tag_info(tiff_t *fp, tiff_tag_id_t tag_id,
-                              tiff_tag_t **tag_info);
+/* Get the count of tags in the provided IFD */
+TIFF_STATUS tiff_get_ifd_tag_count(tiff_t *fp, tiff_ifd_t *ifd, size_t *count);
+
+/* Get handle for a given tag */
+TIFF_STATUS tiff_get_tag(tiff_t *fp,
+                         tiff_ifd_t *ifd,
+                         tiff_tag_id_t tag_id,
+                         tiff_tag_t **tag_info);
+
+/* Free an IFD record */
+TIFF_STATUS tiff_free_ifd(tiff_t *fp, tiff_ifd_t *ifd);
 
 /*******************************************************************/
 /* Functions for managing a TIFF tag                               */
 /*******************************************************************/
 
 /* Get the type and count of the tag (one of TIFF_TYPE_*) */
-TIFF_STATUS tiff_get_tag_type(tiff_t *fp, tiff_tag_t *tag_info,
-                              int *type, int *size);
+TIFF_STATUS tiff_get_tag_info(tiff_t *fp, tiff_tag_t *tag_info,
+                              int *id, int *type, int *count);
 
 /* Get the actual data associated with the tag. Must be an array that
  * is sizeof(type) * size bytes. Use tiff_get_tag_type to find out this
@@ -87,6 +103,12 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
 /* Clean up a tiff_tag_t */
 TIFF_STATUS tiff_free_tag_info(tiff_t *fp, tiff_tag_t *tag_info);
 
+/*******************************************************************/
+/* Helper Functions                                                */
+/*******************************************************************/
+
+/* Get the size of a single item of a given type */
+size_t tiff_get_type_size(int type);
 
 #endif /* __INCLUDE_GHETTO_H__ */
 

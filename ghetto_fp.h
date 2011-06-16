@@ -29,29 +29,5 @@ extern tiff_file_mgr_t *tiff_stdio_mgr;
 TIFF_STATUS tiff_open_ex(tiff_t **fp, tiff_file_mgr_t *mgr,
                          const char *file, const char *mode);
 
-#define TIFF_READ(fp, size, nmemb, buf, count) \
-    fp->mgr->read(fp->fp, size, nmemb, buf, count)
-
-#define TIFF_SEEK(fp, off, whence) \
-    fp->mgr->seek(fp->fp, off, whence)
-
-#define TIFF_SWAP_WORD(word, endianess) \
-    (uint16_t)((((word) >> 8) & 0xff) | ((word) & 0xff) << 8)
-
-#define TIFF_SWAP_DWORD(word, endianess)
-
-/* Macros for reading bytes/words/dwords from a buffer */
-#define TIFF_BYTE(buf, bytes_off) \
-    ((uint8_t *)buf)[bytes_off]
-
-#define TIFF_WORD(buf, bytes_off, endianess) \
-    *((uint16_t *)(((uint8_t *)buf) + (bytes_off)))
-
-#define TIFF_DWORD(buf, bytes_off, endianess) \
-    *((uint32_t *)(((uint8_t *)buf) + (bytes_off)))
-
-/* Defines related to image structure/offsets/etc */
-#define TIFF_HEADER_LEN     8
-
 #endif /* __INCLUDE_GHETTO_FP_H__ */
 
