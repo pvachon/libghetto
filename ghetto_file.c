@@ -98,11 +98,14 @@ TIFF_STATUS tiff_open_ex(tiff_t **fp, tiff_file_mgr_t *mgr,
 
     /* Try to identify the file as a TIFF file */
     if ( (ret = tiff_is_tiff_file(fptr)) != TIFF_OK ) {
-        goto fail_free_fptr;
+        goto fail_close_file;
     }
 
     *fp = fptr;
     return TIFF_OK;
+
+fail_close_file:
+    fptr->mgr->close(fptr->fp);
 
 fail_free_fptr:
     free(fptr);
