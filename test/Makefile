@@ -1,7 +1,7 @@
 TESTS=ghetto_list
 
 CC=gcc
-CFLAGS=-I../
+CFLAGS=-g -O0 -I../
 LDFLAGS=-L../ -lghetto
 
 $(TESTS): $(TESTS).o

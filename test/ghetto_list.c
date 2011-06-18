@@ -4,6 +4,54 @@
 #include <stdint.h>
 
 #define TIFF_TAG_SUBIFD     330
+#define TIFF_TAG_EXIFIFD    34665
+
+int read_ifd(tiff_t *fp, tiff_ifd_t *parent, int tag_id)
+{
+    tiff_off_t ifd_off;
+    tiff_tag_t *ifd_tag;
+
+    int tag_count;
+    int tag_type;
+
+    uint32_t *tag_data = NULL;
+    int i;
+
+    tiff_get_tag(fp, parent, tag_id, &ifd_tag);
+
+    if (ifd_tag == NULL) {
+        printf("Tag %d not found in IFD!\n", tag_id);
+        return -1;
+    }
+
+    tiff_get_tag_info(fp, ifd_tag, NULL, &tag_type, &tag_count);
+
+    if (tag_count < 1) {
+        printf("Tag count is 0. Malformed TIFF file!\n");
+        return -1;
+    }
+
+    tag_data = (uint32_t *)malloc(sizeof(uint32_t) * tag_count);
+
+    if (tag_data == NULL) {
+        perror("malloc");
+        exit(-1);
+    }
+
+    tiff_get_tag_data(fp, ifd_tag, tag_data);
+
+    for (i = 0; i < tag_count; i++) {
+        uint32_t ifd_off = tag_data[i];
+        tiff_ifd_t *subifd_ptr;
+
+        printf("Opening IFD at %08x\n", ifd_off);
+        tiff_read_ifd(fp, ifd_off, &subifd_ptr);
+
+        if (subifd_ptr != NULL) tiff_free_ifd(fp, subifd_ptr);
+    }
+
+    free(tag_data);
+}
 
 int main(int argc, const char *argv[])
 {
@@ -33,34 +81,15 @@ int main(int argc, const char *argv[])
 
     tiff_get_base_ifd_offset(fp, &ifd_off);
 
-    tiff_read_ifd(fp, ifd_off, &ifd);
+    do {
+        tiff_read_ifd(fp, ifd_off, &ifd);
 
-    /* Get SubIFDs tag/tag info */
-    tiff_get_tag(fp, ifd, TIFF_TAG_SUBIFD, &subifd);
+        read_ifd(fp, ifd, TIFF_TAG_SUBIFD);
+        read_ifd(fp, ifd, TIFF_TAG_EXIFIFD);
 
-    tiff_get_tag_info(fp, subifd, NULL, &subifd_type, &subifd_count);
-
-
-    if (subifd_count > 0) {
-        printf("Reading %d SubIFDs\n", subifd_count);
-        subifds = (uint32_t *)malloc(sizeof(uint32_t) * subifd_count);
-        tiff_get_tag_data(fp, subifd, subifds);
-
-        for (i = 0; i < subifd_count; i++) {
-            tiff_ifd_t *subifd_ptr;
-
-            printf("Opening SubIFD at %08x\n", subifds[i]);
-            tiff_read_ifd(fp, subifds[i], &subifd_ptr);
-
-
-            tiff_free_ifd(fp, subifd_ptr);
-        }
-        free(subifds);
-    } else {
-        printf("No SubIFDs!\n");
-    }
-
-    tiff_free_ifd(fp, ifd);
+        tiff_get_next_ifd_offset(fp, ifd, &ifd_off);
+        tiff_free_ifd(fp, ifd);
+    } while (ifd_off != 0);
 
     tiff_close(fp);
 

@@ -107,18 +107,23 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
         return TIFF_UNKNOWN_TYPE;
     }
 
-    if (tag_size * tag_info->count < TIFF_TAG_DATA_FIELD_SIZE) {
+    if (tag_size * tag_info->count <= TIFF_TAG_DATA_FIELD_SIZE) {
         /* Extract the data from the field itself */
         memcpy(data, &tag_info->offset, tag_size * tag_info->count);
     } else {
-        /* Read data from file, into provided buffer */
-        TIFF_SEEK(fp, tag_info->offset, TIFF_SEEK_SET);
+        /* Read data from file, into provided buffer. We are treating
+         * tag_info->offset as an offset here, so we swap it to native
+         * endianess, treating it as a DWORD.
+         */
+        TIFF_SEEK(fp, TIFF_SWAP_DWORD(tag_info->offset, fp->endianess),
+            TIFF_SEEK_SET);
         TIFF_READ(fp, tag_size, tag_info->count, data, &count);
 
         if (count < tag_info->count) {
             return TIFF_END_OF_FILE;
         }
     }
+
     /* Byte swap buffer of data */
     if (tag_size == 2) {
         tiff_swap_word_buffer(data, tag_info->count, fp->endianess);

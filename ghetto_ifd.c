@@ -58,6 +58,8 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
     TIFF_ASSERT_ARG(fp);
     TIFF_ASSERT_ARG(ifd);
 
+    *ifd = NULL;
+
     TIFF_SEEK(fp, off, TIFF_SEEK_SET);
     if (TIFF_READ(fp, 2, 1, &dir_ents, &count) != TIFF_OK) {
         TIFF_TRACE("read %zd entries, aborting\n", count);
@@ -129,7 +131,11 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
         tag_id = TIFF_WORD(buf_off, IFD_ENTRY_TAG, fp->endianess);
         type = TIFF_WORD(buf_off, IFD_ENTRY_TYPE, fp->endianess);
         count = TIFF_DWORD(buf_off, IFD_ENTRY_COUNT, fp->endianess);
-        val = TIFF_DWORD(buf_off, IFD_ENTRY_OFFSET, fp->endianess);
+        /* The value in the field is stored unswapped. This is because
+         * this value can represent either an offset into the file, or
+         * actual data.
+         */
+        val = TIFF_DWORD(buf_off, IFD_ENTRY_OFFSET, MACH_ENDIANESS);
 
         TIFF_TRACE("{ %8.8u %8.4u %-8.8x %-8.8x }\n",
             (unsigned)tag_id, (unsigned)type, (unsigned)count,
