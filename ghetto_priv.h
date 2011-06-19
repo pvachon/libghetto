@@ -50,6 +50,15 @@ struct tiff_tag {
         TIFF_TRACE("assertion failure: " #x "\n"); \
     }
 
+#define TIFF_ASSERT_RETURN(x, r) \
+    { \
+        TIFF_STATUS __ret; \
+        if ((__ret = (x)) != TIFF_OK) {\
+            TIFF_TRACE("call failed: " #x " returned %d", (int)__ret); \
+            return (r); \
+        } \
+    }
+
 #define TIFF_ASSERT_ARG(x) \
     if ((x) == NULL) { \
         TIFF_TRACE("argument is NULL: " #x "\n"); \

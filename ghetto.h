@@ -39,8 +39,9 @@ typedef UINT16          tiff_tag_id_t;
 #define TIFF_END_OF_FILE    0x7     /* End of file was unexpectedly hit */
 #define TIFF_NO_MEMORY      0x8     /* A memory allocation failed */
 #define TIFF_UNKNOWN_TYPE   0x9     /* The type of data represented is unknown */
+#define TIFF_IFD_NOT_IMAGE  0xa     /* The provided IFD is not an image dir */
 
-/* TIFF datatypes */
+/* TIFF tag datatypes */
 #define TIFF_TYPE_BYTE       1
 #define TIFF_TYPE_ASCII      2
 #define TIFF_TYPE_SHORT      3
@@ -54,11 +55,28 @@ typedef UINT16          tiff_tag_id_t;
 #define TIFF_TYPE_FLOAT     11
 #define TIFF_TYPE_DOUBLE    12
 
+/* TIFF sample formats */
+#define TIFF_SAMPLEFORMAT_UINT           1 /* Unsigned integer */
+#define TIFF_SAMPLEFORMAT_INT            2 /* Signed integer */
+#define TIFF_SAMPLEFORMAT_IEEEFP         3 /* IEEE 734 Floating Point */
+#define TIFF_SAMPLEFORMAT_VOID           4 /* Unknown/No type */
+#define TIFF_SAMPLEFORMAT_COMPLEXINT     5 /* Complex Integer */
+#define TIFF_SAMPLEFORMAT_COMPLEXIEEEFP  6 /* Complex Float */
+
+
 /* Open the TIFF file */
 TIFF_STATUS tiff_open(tiff_t **fp, const char *file, const char *mode);
 
 /* Close the TIFF file */
 TIFF_STATUS tiff_close(tiff_t *fp);
+
+/*******************************************************************/
+/* Functions for reading arbitrary data from the file              */
+/*******************************************************************/
+
+/* Read an arbitrary block of data from the TIFF file. */
+TIFF_STATUS tiff_read(tiff_t *fp, size_t offset, size_t size, size_t nmemb,
+                      void *dest_buf, size_t *count);
 
 /*******************************************************************/
 /* Functions for managing the IFDs                                 */
@@ -102,6 +120,37 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
 
 /* Clean up a tiff_tag_t */
 TIFF_STATUS tiff_free_tag_info(tiff_t *fp, tiff_tag_t *tag_info);
+
+/*******************************************************************/
+/* Helper Functions for dealing with Imagery                       */
+/*******************************************************************/
+/* Note: these functions simply operate on IFDs and typically are 
+ * very lightweight to call. No I/O should occurs here.
+ * PPV Note:
+ * libghetto treats strip-oriented image storage as a special case
+ * of tiling, where the tile dimensions are not equal.
+ */
+
+/* Get the properties of an image stored in an associated IFD. */
+TIFF_STATUS tiff_get_image_attribs(tiff_t *fp, tiff_ifd_t *ifd,
+                                   unsigned *width, unsigned *height,
+                                   unsigned *channels);
+
+/* Get information about each pixel sample. Returns:
+ * - bits per pixel
+ * - data type of the pixel
+ */
+TIFF_STATUS tiff_get_image_sample_info(tiff_t *fp, tiff_ifd_t *ifd,
+                                       int *bits, int *data_type);
+
+/* Return information about the image structure. Get the number of
+ * strips/tiles per image, the width/height of a strip or tile and
+ * the compression mechanism used.
+ */
+TIFF_STATUS tiff_get_image_structure(tiff_t *fp, tiff_ifd_t *ifd,
+                                     int *tile_count,
+                                     int *tile_width, int *tile_height,
+                                     unsigned *compression);
 
 /*******************************************************************/
 /* Helper Functions                                                */

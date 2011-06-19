@@ -132,3 +132,22 @@ TIFF_STATUS tiff_close(tiff_t *fp)
     return TIFF_OK;
 }
 
+TIFF_STATUS tiff_read(tiff_t *fp, size_t offset, size_t size, size_t nmemb,
+                      void *dest_buf, size_t *count)
+{
+    TIFF_STATUS ret;
+
+    TIFF_ASSERT_ARG(fp);
+    TIFF_ASSERT_ARG(dest_buf);
+
+    if (size * nmemb == 0) {
+        return TIFF_RANGE_ERROR;
+    }
+
+    if ( (ret = TIFF_SEEK(fp, offset, TIFF_SEEK_SET) ) != TIFF_OK ) {
+        return ret;
+    }
+
+    return TIFF_READ(fp, size, nmemb, dest_buf, count);
+}
+

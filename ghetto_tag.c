@@ -40,7 +40,7 @@ static size_t tiff_type_sizes[] = {
     4, /* Long */
     8, /* Rational */
     1, /* SByte */
-    0, /* Undefined */
+    1, /* Undefined */
     2, /* SShort */
     4, /* SLong */
     8, /* SRational */

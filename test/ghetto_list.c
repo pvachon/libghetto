@@ -6,6 +6,12 @@
 #define TIFF_TAG_SUBIFD     330
 #define TIFF_TAG_EXIFIFD    34665
 
+int dump_tag_data(tiff_t *fp, tiff_tag_t *tag)
+{
+
+    return 0;
+}
+
 int read_ifd(tiff_t *fp, tiff_ifd_t *parent, int tag_id)
 {
     tiff_off_t ifd_off;

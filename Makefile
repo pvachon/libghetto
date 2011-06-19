@@ -1,4 +1,8 @@
-OBJS = ghetto_fp.o ghetto_file.o ghetto_ifd.o ghetto_tag.o
+OBJS = ghetto_fp.o \
+       ghetto_file.o \
+       ghetto_ifd.o \
+       ghetto_tag.o \
+       ghetto_image.o
 
 INCLUDES = -I. -Wall
 DEFINES = -D_DEBUG
