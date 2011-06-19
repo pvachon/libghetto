@@ -44,7 +44,7 @@ Some design notes that might help programmers using libghetto:
   libghetto, either you're doing something wrong or you've found a flaw in
   the API. Either way, drop me a line and we can see what is going on.
 
-4. License
+4. Licence
 A two-clause BSD variant:
   Copyright (c) 2011, Phil Vachon <phil@cowpig.ca>
   All rights reserved.
