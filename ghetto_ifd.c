@@ -135,7 +135,7 @@ TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_ifd_t **ifd)
     TIFF_TRACE("next IFD offset: %08x\n", (unsigned)new_ifd->next_ifd_off);
 
     /* Now ingest the IFD */
-    if ( (ret = tiff_ingest_ifd(fp, new_ifd, ((uint8_t *)buf) + 2, dir_ents)) 
+    if ( (ret = tiff_ingest_ifd(fp, new_ifd, ((uint8_t *)buf) + 2, dir_ents))
         != TIFF_OK)
     {
         free(new_ifd);
