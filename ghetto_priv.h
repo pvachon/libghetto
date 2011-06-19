@@ -5,6 +5,7 @@
 #include <ghetto_fp.h>
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #define ENDIAN_BIG      0x0
 #define ENDIAN_LITTLE   0x1
@@ -45,16 +46,21 @@ struct tiff_tag {
 #define TIFF_TRACE(x, ...) \
     TIFF_PRINT("%s@%d: " x, __FUNCTION__, __LINE__, ##__VA_ARGS__)
 
+#ifdef _DEBUG
 #define TIFF_ASSERT(x) \
     if (!(x)) { \
         TIFF_TRACE("assertion failure: " #x "\n"); \
+        exit(-1); \
     }
+#else
+#define TIFF_ASSERT(...)
+#endif
 
 #define TIFF_ASSERT_RETURN(x, r) \
     { \
         TIFF_STATUS __ret; \
         if ((__ret = (x)) != TIFF_OK) {\
-            TIFF_TRACE("call failed: " #x " returned %d", (int)__ret); \
+            TIFF_TRACE("call failed: " #x " returned %d\n", (int)__ret); \
             return (r); \
         } \
     }

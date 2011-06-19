@@ -44,14 +44,116 @@ TIFF_STATUS tiff_get_base_ifd_offset(tiff_t *fp, tiff_off_t *off)
     return TIFF_OK;
 }
 
+static TIFF_STATUS tiff_ingest_ifd(tiff_t *fp, tiff_ifd_t *ifd,
+                                   void *buf, size_t entries)
+{
+    uint8_t *buf_off = (uint8_t *)buf;
+    int i;
+
+    TIFF_ASSERT_ARG(ifd);
+    TIFF_ASSERT_ARG(buf);
+
+    TIFF_ASSERT(entries != 0);
+
+    ifd->tags = (tiff_tag_t *)calloc(1, sizeof(tiff_tag_t) * entries);
+
+    TIFF_TRACE("Opening IFD with %zd entries\n", entries);
+
+    if (ifd->tags == NULL) {
+        TIFF_TRACE("Failed to allocate %zd bytes for tag info\n",
+            sizeof(tiff_tag_t) * (size_t)entries);
+        return TIFF_NO_MEMORY;
+    }
+
+    TIFF_TRACE("{ %-8s %-8s %-8s %-8s }\n",
+            "ID", "type", "count", "value");
+
+    /* Start parsing the IFD records */
+    for (i = 0; i < (size_t)entries; i++) {
+        uint64_t val;
+        tiff_tag_id_t tag_id;
+        uint32_t count;
+        uint16_t type;
+
+        tag_id = TIFF_WORD(buf_off, IFD_ENTRY_TAG, fp->endianess);
+        type = TIFF_WORD(buf_off, IFD_ENTRY_TYPE, fp->endianess);
+        count = TIFF_DWORD(buf_off, IFD_ENTRY_COUNT, fp->endianess);
+        /* The value in the field is stored unswapped. This is because
+         * this value can represent either an offset into the file, or
+         * actual data.
+         */
+        val = TIFF_DWORD(buf_off, IFD_ENTRY_OFFSET, MACH_ENDIANESS);
+
+        TIFF_TRACE("{ %8.8u %8.4u %-8.8x %-8.8x }\n",
+            (unsigned)tag_id, (unsigned)type, (unsigned)count,
+            (unsigned)val);
+
+        ifd->tags[i].id = tag_id;
+        ifd->tags[i].type = (int)type;
+        ifd->tags[i].count = count;
+        ifd->tags[i].offset = val;
+
+        buf_off += IFD_ENTRY_LEN;
+    }
+
+    return TIFF_OK;
+}
+
+TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_ifd_t **ifd)
+{
+    tiff_ifd_t *new_ifd = NULL;
+    uint16_t dir_ents = 0;
+    TIFF_STATUS ret;
+
+    TIFF_ASSERT_ARG(fp);
+    TIFF_ASSERT_ARG(buf);
+    TIFF_ASSERT_ARG(ifd);
+
+    *ifd = NULL;
+
+    /* Make sure the count allows for at least one IFD entry. */
+    TIFF_ASSERT(count >= (2 + IFD_ENTRY_LEN + sizeof(uint32_t)));
+
+    /* Read the first WORD to figure out how big the IFD is */
+    dir_ents = TIFF_WORD(buf, 0, fp->endianess);
+
+    if (dir_ents == 0 || (dir_ents * IFD_ENTRY_LEN > count)) {
+        TIFF_TRACE("IFD data is too small for given number of entries\n");
+        return TIFF_RANGE_ERROR;
+    }
+
+    new_ifd = (tiff_ifd_t *)calloc(1, sizeof(tiff_ifd_t));
+    if (new_ifd == NULL) {
+        return TIFF_NO_MEMORY;
+    }
+
+    /* Get the offset to the next IFD */
+    new_ifd->next_ifd_off = TIFF_DWORD(buf, 2 + ((size_t)dir_ents * IFD_ENTRY_LEN),
+        fp->endianess);
+    new_ifd->tag_count = dir_ents;
+
+    TIFF_TRACE("next IFD offset: %08x\n", (unsigned)new_ifd->next_ifd_off);
+
+    /* Now ingest the IFD */
+    if ( (ret = tiff_ingest_ifd(fp, new_ifd, ((uint8_t *)buf) + 2, dir_ents)) 
+        != TIFF_OK)
+    {
+        free(new_ifd);
+        return ret;
+    }
+
+    *ifd = new_ifd;
+
+    return TIFF_OK;
+}
+
 /* Read a TIFF IFD at offset */
 TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
 {
     tiff_ifd_t *new_ifd;
     uint16_t dir_ents;
     size_t count, bytes;
-    uint8_t *buf = NULL, *buf_off = NULL;
-    int i;
+    uint8_t *buf = NULL;
 
     TIFF_STATUS ret = TIFF_OK;
 
@@ -100,15 +202,6 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
         goto done_free;
     }
 
-    new_ifd->tags = (tiff_tag_t *)calloc(1, sizeof(tiff_tag_t) * (size_t)dir_ents);
-
-    if (new_ifd->tags == NULL) {
-        TIFF_TRACE("Failed to allocate %zd bytes for tag info\n",
-            sizeof(tiff_tag_t) * (size_t)dir_ents);
-        ret = TIFF_NO_MEMORY;
-        goto done_free_ifd;
-    }
-
     /* Grab the offset of the next IFD */
     new_ifd->next_ifd_off = TIFF_DWORD(buf, (size_t)dir_ents * IFD_ENTRY_LEN,
         fp->endianess);
@@ -117,36 +210,8 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
 
     TIFF_TRACE("Next IFD: %08x\n", (unsigned)new_ifd->next_ifd_off);
 
-    buf_off = buf;
-    TIFF_TRACE("{ %-8s %-8s %-8s %-8s }\n",
-            "ID", "type", "count", "value");
-
-    /* Start parsing the IFD records */
-    for (i = 0; i < (size_t)dir_ents; i++) {
-        uint64_t val;
-        tiff_tag_id_t tag_id;
-        uint32_t count;
-        uint16_t type;
-
-        tag_id = TIFF_WORD(buf_off, IFD_ENTRY_TAG, fp->endianess);
-        type = TIFF_WORD(buf_off, IFD_ENTRY_TYPE, fp->endianess);
-        count = TIFF_DWORD(buf_off, IFD_ENTRY_COUNT, fp->endianess);
-        /* The value in the field is stored unswapped. This is because
-         * this value can represent either an offset into the file, or
-         * actual data.
-         */
-        val = TIFF_DWORD(buf_off, IFD_ENTRY_OFFSET, MACH_ENDIANESS);
-
-        TIFF_TRACE("{ %8.8u %8.4u %-8.8x %-8.8x }\n",
-            (unsigned)tag_id, (unsigned)type, (unsigned)count,
-            (unsigned)val);
-
-        new_ifd->tags[i].id = tag_id;
-        new_ifd->tags[i].type = (int)type;
-        new_ifd->tags[i].count = count;
-        new_ifd->tags[i].offset = val;
-
-        buf_off += IFD_ENTRY_LEN;
+    if ( (ret = tiff_ingest_ifd(fp, new_ifd, buf, dir_ents)) != TIFF_OK ) {
+        goto done_free_ifd;
     }
 
     free(buf);
@@ -154,10 +219,7 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
     *ifd = new_ifd;
 
     return TIFF_OK;
-/*
-done_free_ifd_tags:
-    if (new_ifd->tags) free(new_ifd->tags);
-*/
+
 done_free_ifd:
     if (new_ifd) free(new_ifd);
 
@@ -220,6 +282,24 @@ TIFF_STATUS tiff_get_tag(tiff_t *fp,
     *tag_info = NULL;
 
     return tiff_find_tag(ifd, tag_id, tag_info);
+}
+
+/* Get tag by index in IFD */
+TIFF_STATUS tiff_get_tag_indexed(tiff_t *fp, tiff_ifd_t *ifd, size_t index,
+                                 tiff_tag_t **tag_info)
+{
+    TIFF_ASSERT_ARG(fp);
+    TIFF_ASSERT_ARG(ifd);
+    TIFF_ASSERT_ARG(tag_info);
+
+    if (index > ifd->tag_count) {
+        TIFF_TRACE("Index %zd is out of range.\n", index);
+        return TIFF_RANGE_ERROR;
+    }
+
+    *tag_info = &ifd->tags[index];
+
+    return TIFF_OK;
 }
 
 TIFF_STATUS tiff_free_ifd(tiff_t *fp, tiff_ifd_t *ifd)

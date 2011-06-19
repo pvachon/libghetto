@@ -111,6 +111,11 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
         /* Extract the data from the field itself */
         memcpy(data, &tag_info->offset, tag_size * tag_info->count);
     } else {
+        if (tag_info->offset == 0) {
+            TIFF_TRACE("Malformed tag %d - zero offset into file\n",
+                tag_info->id);
+            return TIFF_TAG_MALFORMED;
+        }
         /* Read data from file, into provided buffer. We are treating
          * tag_info->offset as an offset here, so we swap it to native
          * endianess, treating it as a DWORD.

@@ -40,6 +40,7 @@ typedef UINT16          tiff_tag_id_t;
 #define TIFF_NO_MEMORY      0x8     /* A memory allocation failed */
 #define TIFF_UNKNOWN_TYPE   0x9     /* The type of data represented is unknown */
 #define TIFF_IFD_NOT_IMAGE  0xa     /* The provided IFD is not an image dir */
+#define TIFF_TAG_MALFORMED  0xb     /* Tag is illegal by TIFF standard */
 
 /* TIFF tag datatypes */
 #define TIFF_TYPE_BYTE       1
@@ -95,10 +96,20 @@ TIFF_STATUS tiff_get_next_ifd_offset(tiff_t *fp, tiff_ifd_t *ifd, tiff_off_t *of
 TIFF_STATUS tiff_get_ifd_tag_count(tiff_t *fp, tiff_ifd_t *ifd, size_t *count);
 
 /* Get handle for a given tag */
-TIFF_STATUS tiff_get_tag(tiff_t *fp,
-                         tiff_ifd_t *ifd,
-                         tiff_tag_id_t tag_id,
+TIFF_STATUS tiff_get_tag(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_id_t tag_id,
                          tiff_tag_t **tag_info);
+
+/* Get handle for a tag by index in IFD */
+TIFF_STATUS tiff_get_tag_indexed(tiff_t *fp, tiff_ifd_t *ifd, size_t index,
+                                 tiff_tag_t **tag_info);
+
+/* Create a tiff_ifd_t from a region of memory. This is useful for when
+ * a tag points to a structure that contains an IFD (like a MakerNote),
+ * but the IFD is prefixed with non-standard data (or some work needs
+ * to be done to determine what offset in the tag the IFD is found at).
+ */
+TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count,
+                          tiff_ifd_t **ifd);
 
 /* Free an IFD record */
 TIFF_STATUS tiff_free_ifd(tiff_t *fp, tiff_ifd_t *ifd);
