@@ -99,7 +99,8 @@ static TIFF_STATUS tiff_ingest_ifd(tiff_t *fp, tiff_ifd_t *ifd,
     return TIFF_OK;
 }
 
-TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_ifd_t **ifd)
+TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_off_t tag_off,
+                          tiff_ifd_t **ifd)
 {
     tiff_ifd_t *new_ifd = NULL;
     uint16_t dir_ents = 0;
@@ -141,6 +142,8 @@ TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_ifd_t **ifd)
         free(new_ifd);
         return ret;
     }
+
+    new_ifd->tag_offset = tag_off;
 
     *ifd = new_ifd;
 
@@ -213,6 +216,8 @@ TIFF_STATUS tiff_read_ifd(tiff_t *fp, tiff_off_t off, tiff_ifd_t **ifd)
     if ( (ret = tiff_ingest_ifd(fp, new_ifd, buf, dir_ents)) != TIFF_OK ) {
         goto done_free_ifd;
     }
+
+    new_ifd->tag_offset = 0;
 
     free(buf);
 

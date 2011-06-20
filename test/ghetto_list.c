@@ -83,7 +83,7 @@ void print_unknown_tag(tiff_t *fp, tiff_tag_t *tag)
         id, type, count);
 }
 
-void print_ascii(tiff_t *fp, tiff_tag_t *tag)
+void print_ascii(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_t *tag)
 {
     int id, count, type;
     char *value = NULL;
@@ -92,7 +92,7 @@ void print_ascii(tiff_t *fp, tiff_tag_t *tag)
 
     value = (char *)calloc(1, count + 1);
 
-    tiff_get_tag_data(fp, tag, value);
+    tiff_get_tag_data(fp, ifd, tag, value);
 
     printf("%6.6d %4.4d %6.6d \"%s\"\n",
         id, type, count, value);
@@ -120,7 +120,7 @@ void display_ifd(tiff_t *fp, tiff_ifd_t *ifd)
 
         switch (type) {
         case TIFF_TYPE_ASCII:
-            print_ascii(fp, tag);
+            print_ascii(fp, ifd, tag);
             break;
         default:
             print_unknown_tag(fp, tag);
@@ -129,10 +129,11 @@ void display_ifd(tiff_t *fp, tiff_ifd_t *ifd)
     }
 }
 
-int dump_tag_data(tiff_t *fp, tiff_tag_t *tag)
+int dump_tag_data(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_t *tag)
 {
     int count, type, id, ifd_count;
     tiff_ifd_t *new_ifd;
+    tiff_off_t offset = 0;
 
     uint8_t *data = NULL;
     uint8_t *ifd_off;
@@ -152,7 +153,7 @@ int dump_tag_data(tiff_t *fp, tiff_tag_t *tag)
         return -1;
     }
 
-    tiff_get_tag_data(fp, tag, data);
+    tiff_get_tag_data(fp, ifd, tag, data);
 
     /* dump_buffer(data, count * tiff_get_type_size(type)); */
     ifd_off = data;
@@ -161,6 +162,8 @@ int dump_tag_data(tiff_t *fp, tiff_tag_t *tag)
         /* Read the Nikon IFD */
         ifd_off += 18;
         ifd_count -= 18;
+        tiff_get_raw_tag_field(fp, tag, &offset);
+        offset += 18;
     } else if (!strncmp(data, "AOC", 3)) {
         printf("Not sure about Pentax MakerNote...\n");
         goto done;
@@ -169,7 +172,7 @@ int dump_tag_data(tiff_t *fp, tiff_tag_t *tag)
     }
 
     printf("Dumping MakerNote IFD\n");
-    tiff_make_ifd(fp, ifd_off, ifd_count, &new_ifd);
+    tiff_make_ifd(fp, ifd_off, ifd_count, offset, &new_ifd);
 
     display_ifd(fp, new_ifd);
 
@@ -191,7 +194,7 @@ int find_and_dump_tag(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_id_t tagid)
         return -1;
     }
 
-    dump_tag_data(fp, ifd_tag);
+    dump_tag_data(fp, ifd, ifd_tag);
 
     return 0;
 }
@@ -228,7 +231,7 @@ int read_ifd(tiff_t *fp, tiff_ifd_t *parent, int tag_id)
         exit(-1);
     }
 
-    tiff_get_tag_data(fp, ifd_tag, tag_data);
+    tiff_get_tag_data(fp, parent, ifd_tag, tag_data);
 
     for (i = 0; i < tag_count; i++) {
         uint32_t ifd_off = tag_data[i];

@@ -107,8 +107,10 @@ TIFF_STATUS tiff_get_tag_indexed(tiff_t *fp, tiff_ifd_t *ifd, size_t index,
  * a tag points to a structure that contains an IFD (like a MakerNote),
  * but the IFD is prefixed with non-standard data (or some work needs
  * to be done to determine what offset in the tag the IFD is found at).
+ * Allows you to specify an offset from which IFD entry offsets will be
+ * considered from - some MakerNotes do this.
  */
-TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count,
+TIFF_STATUS tiff_make_ifd(tiff_t *fp, void *buf, size_t count, tiff_off_t tag_off,
                           tiff_ifd_t **ifd);
 
 /* Free an IFD record */
@@ -126,8 +128,15 @@ TIFF_STATUS tiff_get_tag_info(tiff_t *fp, tiff_tag_t *tag_info,
  * is sizeof(type) * size bytes. Use tiff_get_tag_type to find out this
  * information.
  */
-TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
+TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_t *tag_info,
                               void *data);
+
+/* Get the raw contents of the TIFF tag's offset field. You only need
+ * to do this to work around busted tag contents that specify offsets
+ * relative to the start of the tag, rather than the start of the file.
+ */
+TIFF_STATUS tiff_get_raw_tag_field(tiff_t *fp, tiff_tag_t *tag_info,
+                                   tiff_off_t *data);
 
 /* Clean up a tiff_tag_t */
 TIFF_STATUS tiff_free_tag_info(tiff_t *fp, tiff_tag_t *tag_info);

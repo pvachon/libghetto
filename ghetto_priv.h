@@ -25,6 +25,7 @@ struct tiff_ifd {
     struct tiff_tag *tags;
     size_t tag_count;
     tiff_off_t next_ifd_off;
+    tiff_off_t tag_offset; /* Offset applied to tag reads */
 };
 
 struct tiff_tag {

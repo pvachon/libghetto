@@ -94,7 +94,7 @@ TIFF_STATUS tiff_get_tag_info(tiff_t *fp, tiff_tag_t *tag_info,
     return TIFF_OK;
 }
 
-TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
+TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_ifd_t *ifd, tiff_tag_t *tag_info,
                               void *data)
 {
     size_t tag_size = 0, count = 0;
@@ -120,7 +120,8 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
          * tag_info->offset as an offset here, so we swap it to native
          * endianess, treating it as a DWORD.
          */
-        TIFF_SEEK(fp, TIFF_SWAP_DWORD(tag_info->offset, fp->endianess),
+        TIFF_SEEK(fp,
+            TIFF_SWAP_DWORD(tag_info->offset, fp->endianess) + ifd->tag_offset,
             TIFF_SEEK_SET);
         TIFF_READ(fp, tag_size, tag_info->count, data, &count);
 
@@ -143,6 +144,18 @@ TIFF_STATUS tiff_get_tag_data(tiff_t *fp, tiff_tag_t *tag_info,
             TIFF_TRACE("Unknown/unhandled data type for byte swapping. Be careful!\n");
        }
     }
+
+    return TIFF_OK;
+}
+
+TIFF_STATUS tiff_get_raw_tag_field(tiff_t *fp, tiff_tag_t *tag_info,
+                                   tiff_off_t *data)
+{
+    TIFF_ASSERT_ARG(fp);
+    TIFF_ASSERT_ARG(tag_info);
+    TIFF_ASSERT_ARG(data);
+
+    *data = TIFF_SWAP_DWORD(tag_info->offset, fp->endianess);
 
     return TIFF_OK;
 }

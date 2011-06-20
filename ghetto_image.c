@@ -92,21 +92,21 @@ TIFF_STATUS tiff_get_image_attribs(tiff_t *fp, tiff_ifd_t *ifd,
     if (width) {
         TIFF_ASSERT_RETURN(tiff_get_tag(fp, ifd, TIFF_TAG_IMAGEWIDTH, &tag),
                 TIFF_IFD_NOT_IMAGE);
-        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, width),
+        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, width),
                 TIFF_IFD_NOT_IMAGE);
     }
 
     if (height) {
         TIFF_ASSERT_RETURN(tiff_get_tag(fp, ifd, TIFF_TAG_IMAGELENGTH, &tag),
                 TIFF_IFD_NOT_IMAGE);
-        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, height),
+        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, height),
                 TIFF_IFD_NOT_IMAGE);
     }
 
     if (samples) {
         TIFF_ASSERT_RETURN(tiff_get_tag(fp, ifd, TIFF_TAG_SAMPLESPERPIXEL, &tag),
                 TIFF_IFD_NOT_IMAGE);
-        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, samples),
+        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, samples),
                 TIFF_IFD_NOT_IMAGE);
     }
 
@@ -128,7 +128,7 @@ TIFF_STATUS tiff_get_image_sample_info(tiff_t *fp, tiff_ifd_t *ifd,
     if (bits) {
         TIFF_ASSERT_RETURN(tiff_get_tag(fp, ifd, TIFF_TAG_BITSPERSAMPLE, &tag),
             TIFF_IFD_NOT_IMAGE);
-        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, bits),
+        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, bits),
             TIFF_IFD_NOT_IMAGE);
     }
 
@@ -136,7 +136,7 @@ TIFF_STATUS tiff_get_image_sample_info(tiff_t *fp, tiff_ifd_t *ifd,
         if (tiff_get_tag(fp, ifd, TIFF_TAG_SAMPLEFORMAT, &tag) != TIFF_OK) {
             *data_type = TIFF_SAMPLEFORMAT_UINT;
         } else {
-            TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, bits),
+            TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, bits),
                 TIFF_IFD_NOT_IMAGE);
         }
     }
@@ -165,7 +165,7 @@ TIFF_STATUS tiff_get_image_structure(tiff_t *fp, tiff_ifd_t *ifd,
     if (compression) {
         TIFF_ASSERT_RETURN(tiff_get_tag(fp, ifd, TIFF_TAG_COMPRESSION, &tag),
             TIFF_IFD_NOT_IMAGE);
-        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, tag, compression),
+        TIFF_ASSERT_RETURN(tiff_get_tag_data(fp, ifd, tag, compression),
             TIFF_IFD_NOT_IMAGE);
     }
 
